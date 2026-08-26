@@ -33,7 +33,7 @@ export const db = factory({
         firstName: String,
         lastName: String,
         name: String,
-        usename: String,
+        username: String,
         posts: manyOf('post')
     },
     post: {
@@ -64,11 +64,12 @@ export const db = factory({
 
 type ModelDB = typeof db
 
-type Post = ReturnType<typeof db.user.create>
+// type User = ReturnType<typeof db.user.create>
+type Post = ReturnType<typeof db.post.create>
 
 const serializePost = (post: Post) => ({
     ...post,
-    user: post.user!.id,
+    user: post.user!.id
 })
 
 let currentUser: string | null = null
@@ -91,15 +92,15 @@ export const handlers = [
         return HttpResponse.json(posts)
     }),
 
-    http.post('fakeApi/posts', async function({ request }){
+    http.post('fakeApi/posts', async function ({ request }){
         const data = (await request.json())! as Record<string, unknown>
 
         if('content' in data && data.content === 'error'){
             await delay(ARTIFICIAL_DELAY_MS)
 
-            return new HttpResponse(JSON.stringify('Server error saving this post!')), {
+            return HttpResponse.json({error: JSON.stringify('Server error saving this post!')}, {
                 status: 500,
-            }
+            })
         }
 
         data.date = new Date().toISOString()
@@ -188,7 +189,7 @@ const notificationTemplates = ['poked you', 'says hi!', `is glad we're friends`,
 
 function generateRandomNotifications(
     since: string | undefined,
-    currentUser: string | undefined,
+    currentUser: string | null,
     numNotifications: number,
     db: ModelDB
 ){
@@ -210,7 +211,7 @@ function generateRandomNotifications(
         const template = randomFromArray(notificationTemplates)
         return {
             id: nanoid(),
-            date: faker.data.between({ from: pastDate, to: now }).toISOString(),
+            date: faker.date.between({ from: pastDate, to: now }).toISOString(),
             message: template,
             user: user.id,
         }

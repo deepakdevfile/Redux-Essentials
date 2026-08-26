@@ -1,0 +1,42 @@
+import { useAppSelector } from "../../app/App0003_hooks"
+import { Link, useParams } from "react-router-dom"
+import { selectPostById } from './App0003_postsSlice'
+import { PostAuthor } from './PostAuthor'
+import { TimeAgo } from '../../components/TimeAgo'
+import { ReactionButtons } from './ReactionButtons'
+import { selectCurrentUsername } from "../auth/App0003_authSlice"
+
+export const SinglePostPage = () => {
+    const { postId } = useParams()
+    const post = useAppSelector((state) => selectPostById(state, postId!))
+    const currentUsername = useAppSelector(selectCurrentUsername)!
+
+    if(!post){
+        return (
+            <section>
+                <h2>Post not found!</h2>
+            </section>
+        )
+    }
+
+    const canEdit = currentUsername === post.user
+
+    return (
+        <section>
+            <article>
+                <h2>{post.title}</h2>
+                <div>
+                    <PostAuthor userId={post.user}/>
+                    <TimeAgo timestamp={post.date}/>
+                </div>
+                <p> {post.content} </p>
+                <ReactionButtons post={post}/>
+                {canEdit && (
+                    <Link to={`/editPost/${post.id}`}>
+                        Edit Post
+                    </Link>
+                )}
+            </article>
+        </section>
+    )
+}
