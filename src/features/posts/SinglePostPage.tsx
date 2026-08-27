@@ -23,16 +23,16 @@ export const SinglePostPage = () => {
 
     return (
         <section>
-            <article>
+            <article className="post">
                 <h2>{post.title}</h2>
                 <div>
                     <PostAuthor userId={post.user}/>
                     <TimeAgo timestamp={post.date}/>
                 </div>
-                <p> {post.content} </p>
+                <p className="post-content"> {post.content} </p>
                 <ReactionButtons post={post}/>
                 {canEdit && (
-                    <Link to={`/editPost/${post.id}`}>
+                    <Link to={`/editPost/${post.id}`} className="button">
                         Edit Post
                     </Link>
                 )}

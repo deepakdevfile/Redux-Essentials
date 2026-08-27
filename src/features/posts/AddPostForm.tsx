@@ -30,14 +30,11 @@ export const AddPostForm = () => {
             setAddRequestStatus('pending')
             await dispatch(addNewPost({title, content, user: userId}))
             form.reset()
-            // await dispatch(postAdded(title, content, userId))
         } catch (err){
             console.log('Failed to save the post: ', err)
         } finally {
             setAddRequestStatus('idle')
         }
-
-        e.currentTarget.reset()
     }
 
     return (
