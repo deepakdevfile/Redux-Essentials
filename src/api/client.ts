@@ -41,3 +41,11 @@ export async function client <T>(
         return Promise.reject(err.message ? err.message: data)
     }
 }
+
+client.get = function <T> (endpoint: string, customConfig: Partial<RequestInit> = {}){
+    return client <T> (endpoint, { ...customConfig, method: 'GET' })
+}
+
+client.post = function <T> (endpoint: string, body: any, customConfig: Partial<RequestInit> = {}){
+    return client <T> (endpoint, {...customConfig, body })
+}

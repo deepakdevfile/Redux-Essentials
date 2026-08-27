@@ -16,10 +16,13 @@ const authSlice = createSlice({
         userLoggedIn(state, action: PayloadAction<string>){
             state.username = action.payload
         },
-    }
+        userLoggedOut(state){
+            state.username = null
+        },
+    },
 })
 
-export const { userLoggedIn } = authSlice.actions
+export const { userLoggedIn, userLoggedOut } = authSlice.actions
 
 export default authSlice.reducer
 

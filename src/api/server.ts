@@ -3,10 +3,31 @@ import { setupWorker } from 'msw/browser'
 import { factory, manyOf, primaryKey, oneOf } from '@mswjs/data'
 import { nanoid } from '@reduxjs/toolkit'
 import { faker } from '@faker-js/faker/locale/en'
+import { Server as MockSocketServer } from 'mock-socket'
+import type { Client } from 'mock-socket'
 
 import { parseISO } from 'date-fns'
 
 const ARTIFICIAL_DELAY_MS = 2000
+const RECENT_NOTIFICATIONS_DAYS = 7
+const NUM_USERS = 3
+const POST_PER_USER = 3
+
+let useSeededRNG = true
+if(useSeededRNG){
+    let randomSeedString = localStorage.getItem('randomTimestampSeed')
+    let seedDate
+
+    if(randomSeedString){
+        seedDate = new Date(randomSeedString)
+    } else {
+        seedDate = new Date()
+        randomSeedString = seedDate.toISOString()
+        localStorage.setItem('randomTimestampSeed', randomSeedString)
+    }
+
+    faker.seed(seedDate.getTime())
+}
 
 function delay(ms: number){
     return new Promise((resolve) => setTimeout(resolve, ms))
@@ -64,8 +85,39 @@ export const db = factory({
 
 type ModelDB = typeof db
 
-// type User = ReturnType<typeof db.user.create>
+type User = ReturnType<typeof db.user.create>
 type Post = ReturnType<typeof db.post.create>
+
+const createUserData = () => {
+    const firstName = faker.person.firstName()
+    const lastName = faker.person.lastName()
+
+    return {
+        firstName, 
+        lastName,
+        name: `${firstName} ${lastName}`,
+        username: faker.internet.username(),
+    }
+}
+
+const createPostData = (user: User) => {
+    return {
+        title: faker.lorem.words(),
+        date: faker.date.recent({ days: RECENT_NOTIFICATIONS_DAYS}).toISOString(),
+        user,
+        content: faker.lorem.paragraphs(),
+        reactions: db.reaction.create(),
+    }
+}
+
+for(let i = 0; i < NUM_USERS; i++){
+    const author = db.user.create(createUserData())
+
+    for(let j = 0; j < POST_PER_USER; j++){
+        const newPost = createPostData(author)
+        db.post.create(newPost)
+    }
+}
 
 const serializePost = (post: Post) => ({
     ...post,
@@ -184,6 +236,52 @@ export const handlers = [
 ]
 
 export const worker = setupWorker(...handlers)
+
+const socketServer = new MockSocketServer('ws://localhost')
+
+let currentSocket : Client 
+
+const getSocket = () => {
+    if(!currentSocket){
+        const message = 'No socket connnection - please make sure the notification slice `onCacheEntryAdded` logic is set up first'
+        alert(message)
+        throw new Error(message)
+    }
+    return currentSocket
+}
+
+const sendMessage = (obj: any) => {
+    getSocket().send(JSON.stringify(obj))
+}
+
+const sendRandomNotifications = (since: string) => {
+    const numNotifications = getRandomInt(1, 5)
+    const notifications = generateRandomNotifications(since, currentUser, numNotifications, db)
+
+    sendMessage({ type: 'notifications', payload: notifications})
+}
+
+export const forceGenerateNotifications = (since: string) => {
+    sendRandomNotifications(since)
+}
+
+socketServer.on('connection', (socket) => {
+    currentSocket = socket
+
+    socket.on('message',(data) => {
+        const message = JSON.parse(data as string)
+
+        switch(message.type){
+            case 'notifications': {
+                const since = message.payload
+                sendRandomNotifications(since)
+                break
+            }
+            default: 
+                break
+        }
+    })
+})
 
 const notificationTemplates = ['poked you', 'says hi!', `is glad we're friends`, 'sent you a gift']
 
